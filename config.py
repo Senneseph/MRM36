@@ -20,3 +20,5 @@ API_PORT = 8001 # Use the port you were running on
 PROJECTS_BASE_DIR = os.getenv("PROJECTS_BASE_DIR", "./mrm36_projects")
 
 print(f"Attempting to use Docker Host: {DOCKER_SOCKET_PATH}") # Add print for debugging
+
+DEFAULT_TEST_IMAGE = "mrm36/base-tools:latest" # Make sure you built this!
