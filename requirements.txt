@@ -1,0 +1,13 @@
+# requirements.txt
+
+# Core web framework
+fastapi==0.115.12
+
+# ASGI server with standard optimizations (websockets, etc.)
+uvicorn[standard]==0.34.0
+
+# HTTP client library (for talking to Ollama, etc.)
+httpx==0.28.1
+
+# Docker SDK for Python (for container management)
+docker==7.1.0
