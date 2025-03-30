@@ -3,6 +3,9 @@ Memory Rotate Multiplicity E-Seek-S
 
 ## Setup
 
+# Install Python, Git, and Docker
+You will need Python, Git, and Docker.
+
 # Create a virtual environment (if you haven't already)
 `python -m venv .venv`
 

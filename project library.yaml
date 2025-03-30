@@ -1,0 +1,56 @@
+Role Descriptions:
+- Director
+- Worker
+- Tester
+- Evaluator
+- Manager
+- Assistant
+
+LLM:
+- Thinker
+- Planner
+- Executor
+- Chat
+
+AI Attack Pattern:
+- Event - Receive incoming prompt (Proposal):
+  - Create new PM Project if one hasn't been started
+  - Create new PM Task (if one hasn't been started) & execute -> evaluate prompt and return plan
+  - Trigger Project Meeting to evaluate Proposal
+- Trigger - Project Meeting (Proposal):
+  - Choice:
+    - Approve, continue
+    - Modify repeat Receive incoming prompt (re-using existing ticket)
+- Feedback - Project Proposal Approved:
+  - Create new PM Project Goal (approved plan goal)
+  - Create new PM Project Milestones (plan outline)
+  - First task is further task decomposition (all milestones get tasks until they are fully decomposed)
+  - Trigger Project Meeting to evaluate Project Overview (Project Goal, Milestones, Tasks)
+- Trigger - Project Meeting (Project Overview):
+  - Choice:
+    - Approve, continue
+    - Re-evaluate
+  - We can wait at this step to let the user manually inspect the project proposal and make changes. This let's them use the "re-evaluate" option to refresh the Program's understanding of the Project Goal, Milestones, and Tasks
+- Feedback - Project Overview Approved:
+  - For each Milestone:
+    - For each Task:
+      - Allocate resources to perform task
+      - Update Task / Milestone / Project Goal as they finish (updating Tasks individually may update the others)
+    - Once all tasks are finished, update their Milestone and ready it for approval (Trigger Project Meeting to evaluate Milestone)
+    - Approving a Milestone should mark it as closed and it can be safely referenced when work for other Milestones is done
+    - A Milestone or task may need to be revisited.
+  - Once all Milestones are finished ready the Project Goal for approval (Trigger Project Meeting to evaluate Project Goals' outcome / deliverable)
+- Notes - At any time, a Worker can ask for help, triggering an emergency task / milestone / project meeting to solicit the end user's help
+  
+
+Personas:
+- Bill (in charge and tough but fair)
+- Gary (wants to find out what you need)
+- Piper (Assistant + Chat helps to interpret the Project)
+
+Ticket Structure:
+- Request
+- Deliverable
+- Owner (Persona)
+- Comments (ongoing discussions between the user and personas) and their owerns
+- Status

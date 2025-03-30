@@ -1,22 +1,134 @@
 import docker
-from docker.errors import APIError, NotFound
+from docker.errors import APIError, NotFound, DockerException
 import logging
 from config import DOCKER_SOCKET_PATH, PROJECTS_BASE_DIR
 import os
+from typing import List, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
-# Initialize Docker client (could be enhanced with error handling)
-# Consider moving initialization to lifespan manager if complex setup needed
+# --- Docker Client Initialization ---
+docker_client: Optional[docker.DockerClient] = None
 try:
-    docker_client = docker.from_env(environment={'DOCKER_HOST': DOCKER_SOCKET_PATH})
-    # Test connection
-    docker_client.ping()
+    # Explicitly provide base_url, helps avoid ambiguity
+    docker_client = docker.DockerClient(base_url=DOCKER_SOCKET_PATH)
+    docker_client.ping() # Test connection
     logger.info(f"Successfully connected to Docker daemon at {DOCKER_SOCKET_PATH}")
 except Exception as e:
-    logger.error(f"Failed to connect to Docker daemon at {DOCKER_SOCKET_PATH}: {e}", exc_info=True)
-    # Decide how to handle this - raise, exit, or run degraded? For now, log and continue.
+    logger.error(f"Failed to connect to Docker daemon at {DOCKER_SOCKET_PATH}: {e}", exc_info=False)
+    # Set client to None so other functions can check
     docker_client = None
+
+# --- Helper ---
+def get_container_name(project_id: str) -> str:
+    return f"mrm36_project_{project_id}"
+
+def get_volume_name(project_id: str) -> str:
+    return f"mrm36_project_{project_id}_vol"
+
+# --- Existing Functions (Ensure Robustness) ---
+async def launch_project_container(project_id: str, image_name: str) -> Dict:
+    # ... (Keep existing logic, ensure it handles already running/stopped states) ...
+    # Make sure it raises ConnectionError if docker_client is None
+    if not docker_client:
+        raise ConnectionError("Docker client not available.")
+    # ... (rest of the function) ...
+    # Return dict like {"status": ..., "container_id": ..., "workspace_volume": ...}
+
+async def execute_command_in_container(project_id: str, command: str) -> Dict:
+    # ... (Keep existing logic) ...
+    # Make sure it raises ConnectionError if docker_client is None
+    if not docker_client:
+        raise ConnectionError("Docker client not available.")
+    # ... (rest of the function) ...
+    # Return dict like {"exit_code": ..., "output": ...}
+
+# --- NEW Functions ---
+async def stop_project_container(project_id: str) -> bool:
+    """Stops the container for a given project ID."""
+    if not docker_client:
+        raise ConnectionError("Docker client not available.")
+    container_name = get_container_name(project_id)
+    try:
+        container = docker_client.containers.get(container_name)
+        if container.status == 'running':
+            logger.info(f"Stopping container '{container_name}'...")
+            container.stop()
+            logger.info(f"Container '{container_name}' stopped.")
+            return True
+        else:
+            logger.info(f"Container '{container_name}' is already stopped (status: {container.status}).")
+            return True # Considered success if already stopped
+    except NotFound:
+        logger.warning(f"Container '{container_name}' not found, cannot stop.")
+        return False # Indicate container wasn't found
+    except APIError as e:
+        logger.error(f"Docker API error stopping container {container_name}: {e}", exc_info=True)
+        raise RuntimeError(f"Docker error stopping container: {e}") from e
+    except Exception as e:
+         logger.error(f"Unexpected error stopping container {container_name}: {e}", exc_info=True)
+         raise RuntimeError(f"Unexpected error stopping container: {e}") from e
+
+async def remove_project_container(project_id: str) -> bool:
+    """
+    Stops (if running) and removes the container for a given project ID.
+    Does NOT remove the associated volume.
+    """
+    if not docker_client:
+        raise ConnectionError("Docker client not available.")
+    container_name = get_container_name(project_id)
+    try:
+        container = docker_client.containers.get(container_name)
+        # Ensure stopped before removal
+        if container.status == 'running':
+            logger.info(f"Container '{container_name}' is running. Stopping before removal...")
+            container.stop()
+            logger.info(f"Container '{container_name}' stopped.")
+
+        logger.info(f"Removing container '{container_name}'...")
+        container.remove() # Set v=True to remove associated anonymous volumes, but we use named ones
+        logger.info(f"Container '{container_name}' removed.")
+        return True
+    except NotFound:
+        logger.warning(f"Container '{container_name}' not found, cannot remove.")
+        return False # Indicate container wasn't found
+    except APIError as e:
+        logger.error(f"Docker API error removing container {container_name}: {e}", exc_info=True)
+        raise RuntimeError(f"Docker error removing container: {e}") from e
+    except Exception as e:
+         logger.error(f"Unexpected error removing container {container_name}: {e}", exc_info=True)
+         raise RuntimeError(f"Unexpected error removing container: {e}") from e
+
+async def list_mrm36_containers() -> List[Dict]:
+    """Lists all Docker containers matching the MRM36 naming convention."""
+    if not docker_client:
+        logger.warning("Docker client not available, cannot list containers.")
+        return [] # Return empty list if no client
+
+    mrm36_containers = []
+    try:
+        # List all containers (including stopped ones)
+        all_containers = docker_client.containers.list(all=True, filters={"name": "mrm36_project_*"})
+        for container in all_containers:
+            # Extract project ID from name
+            if container.name.startswith("mrm36_project_"):
+                project_id = container.name.replace("mrm36_project_", "", 1)
+                mrm36_containers.append({
+                    "project_id": project_id,
+                    "container_id": container.short_id,
+                    "container_name": container.name,
+                    "status": container.status, # e.g., 'running', 'exited', 'created'
+                    "image": container.image.tags[0] if container.image.tags else 'unknown'
+                })
+        logger.info(f"Found {len(mrm36_containers)} MRM36 containers.")
+        return mrm36_containers
+    except APIError as e:
+        logger.error(f"Docker API error listing containers: {e}", exc_info=True)
+        # Decide how to handle - maybe return empty list or raise? Returning empty for now.
+        return []
+    except Exception as e:
+        logger.error(f"Unexpected error listing containers: {e}", exc_info=True)
+        return []
 
 def ensure_projects_base_dir():
     """Creates the base directory for project volumes if it doesn't exist."""

@@ -3,7 +3,13 @@ from pydantic import BaseModel, Field
 import logging
 from services import docker_service # Import our docker functions
 from config import DEFAULT_TEST_IMAGE # Import the default image name
-
+# Import helper functions from main (consider moving state logic later)
+from core.state_manager import (
+    active_projects_state,
+    update_project_orchestration_status,
+    get_project_orchestration_status,
+    remove_project_from_state # Import the remove function too
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/projects", tags=["Projects"])
@@ -175,6 +181,128 @@ async def delete_project(project_id: str):
     logger.warning(f"delete_project for {project_id} not fully implemented.")
     # TODO: Implement using container.stop(), container.remove(), volume.remove()
     raise HTTPException(status_code=501, detail="Not Implemented Yet")
+
+@router.post(
+    "/{project_id}/halt",
+    summary="Halt active orchestration for a project",
+    status_code=status.HTTP_200_OK
+)
+async def halt_project_work(project_id: str):
+    """
+    Signals the orchestrator to stop assigning new tasks or executing
+    commands for this project. Does NOT stop the container.
+    Work can be resumed later.
+    """
+    if project_id not in active_projects_state:
+         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Project '{project_id}' not found or not active.")
+    update_project_orchestration_status(project_id, "halted")
+    # TODO: Signal the actual orchestrator/background task for this project if running
+    return {"project_id": project_id, "orchestration_status": "halted"}
+
+@router.post(
+    "/{project_id}/resume",
+    summary="Resume active orchestration for a project",
+    status_code=status.HTTP_200_OK
+)
+async def resume_project_work(project_id: str):
+    """
+    Signals the orchestrator to resume assigning tasks and executing
+    commands for this project based on its .plan file.
+    """
+    if project_id not in active_projects_state:
+         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Project '{project_id}' not found or not active.")
+    # Add logic here: check if container is running? Or let orchestrator handle it?
+    # For now, just update the flag.
+    update_project_orchestration_status(project_id, "running")
+    # TODO: Signal the actual orchestrator/background task for this project
+    return {"project_id": project_id, "orchestration_status": "running"}
+
+@router.post(
+    "/halt-all",
+    summary="Halt active orchestration for ALL active projects",
+    status_code=status.HTTP_200_OK
+)
+async def halt_all_projects():
+    """Halts orchestration for all currently tracked projects."""
+    halted_projects = []
+    for project_id in list(active_projects_state.keys()): # Iterate over keys copy
+        update_project_orchestration_status(project_id, "halted")
+        halted_projects.append(project_id)
+        # TODO: Signal orchestrators/tasks
+    logger.info(f"Halted orchestration for projects: {halted_projects}")
+    return {"message": "Sent halt signal to all active projects.", "halted_count": len(halted_projects)}
+
+@router.post(
+    "/resume-all",
+    summary="Resume active orchestration for ALL active projects",
+    status_code=status.HTTP_200_OK
+)
+async def resume_all_projects():
+    """Resumes orchestration for all currently tracked projects."""
+    resumed_projects = []
+    for project_id in list(active_projects_state.keys()): # Iterate over keys copy
+        update_project_orchestration_status(project_id, "running")
+        resumed_projects.append(project_id)
+        # TODO: Signal orchestrators/tasks
+    logger.info(f"Resumed orchestration for projects: {resumed_projects}")
+    return {"message": "Sent resume signal to all active projects.", "resumed_count": len(resumed_projects)}
+
+
+@router.post(
+    "/{project_id}/stop-container",
+    summary="Stop the Docker container for a project",
+    status_code=status.HTTP_200_OK
+)
+async def stop_project_container_endpoint(project_id: str):
+    """Stops the project's Docker container. Implies halting work."""
+    update_project_orchestration_status(project_id, "halted") # Halt orchestration first
+    # TODO: Signal orchestrator/task
+    try:
+        stopped = await docker_service.stop_project_container(project_id)
+        if stopped:
+             if project_id in active_projects_state:
+                 active_projects_state[project_id]["container_status"] = "exited" # Update internal state
+             return {"project_id": project_id, "message": "Container stop request sent successfully."}
+        else:
+             # Container might already be stopped or not found
+             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Container for project '{project_id}' not found or already stopped.")
+    except ConnectionError as e:
+         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"Docker connection error: {e}")
+    except Exception as e:
+        logger.error(f"Failed to stop container for project {project_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+# --- Modify DELETE Endpoint ---
+# Changed path to be more specific
+@router.delete(
+    "/{project_id}/container",
+    summary="Stop and Remove a Project's Container (Keeps Volume)",
+    status_code=status.HTTP_200_OK # Or 204 No Content
+)
+async def remove_project_container_endpoint(project_id: str):
+    """
+    Stops (if running) and removes the project's Docker container.
+    The persistent data volume (workspace, .plan, .brain) is KEPT.
+    """
+    update_project_orchestration_status(project_id, "halted") # Halt orchestration first
+    # TODO: Signal orchestrator/task
+    try:
+        removed = await docker_service.remove_project_container(project_id)
+        if removed:
+             # Remove from active state tracking if successful
+             if project_id in active_projects_state:
+                 del active_projects_state[project_id]
+             return {"project_id": project_id, "message": "Container removed successfully. Volume data retained."}
+        else:
+             # Container might have already been removed
+             if project_id in active_projects_state:
+                 del active_projects_state[project_id] # Clean up state anyway
+             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Container for project '{project_id}' not found.")
+    except ConnectionError as e:
+         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"Docker connection error: {e}")
+    except Exception as e:
+        logger.error(f"Failed to remove container for project {project_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 # Add endpoints later for:
 # - Reading/Writing .plan files (maybe via docker cp or direct volume access if safe)
