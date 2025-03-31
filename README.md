@@ -23,3 +23,7 @@ You will need Python, Git, and Docker.
 
 ## Launch Service
 `uvicorn main:app --host 127.0.0.1 --port 8001 --reload`
+
+# Troubleshooting
+> Problem: Application doesn't seem to be processing API commands.
+Solution: Check that the port MRM36 uses is not in use by another application. Run `netstat -ano | findstr ":8001"` on Windows (or equivalent on another OS). If something's already using the port, kill its process.

@@ -12,15 +12,15 @@ LLM:
 - Executor
 - Chat
 
-AI Attack Pattern:
+Project Attack Pattern:
 - Event - Receive incoming prompt (Proposal):
   - Create new PM Project if one hasn't been started
   - Create new PM Task (if one hasn't been started) & execute -> evaluate prompt and return plan
   - Trigger Project Meeting to evaluate Proposal
 - Trigger - Project Meeting (Proposal):
   - Choice:
-    - Approve, continue
-    - Modify repeat Receive incoming prompt (re-using existing ticket)
+    - Approve, continue to next step
+    - Modify, repeat Receive incoming prompt (re-using existing ticket)
 - Feedback - Project Proposal Approved:
   - Create new PM Project Goal (approved plan goal)
   - Create new PM Project Milestones (plan outline)
@@ -41,16 +41,53 @@ AI Attack Pattern:
     - A Milestone or task may need to be revisited.
   - Once all Milestones are finished ready the Project Goal for approval (Trigger Project Meeting to evaluate Project Goals' outcome / deliverable)
 - Notes - At any time, a Worker can ask for help, triggering an emergency task / milestone / project meeting to solicit the end user's help
-  
 
 Personas:
-- Bill (in charge and tough but fair)
-- Gary (wants to find out what you need)
-- Piper (Assistant + Chat helps to interpret the Project)
+- Narrator: The narrator is the Orchestrator in our system. It is "telling the story of the project" by progressing through the internal logic.
+- Bots Master:
+  - Ziv aka ZZ: The end user, main character, and leader of the project.
+  - Blitzy:  Aan AI assistant, Ziv's substitute, and meta-persona. She is trying to be better than Ziv and watches everything that happens.
+  - The Street Boyzz:
+    - Jammerz: Tool Usage Specialist. He knows how a tool design can be applied to a target or situation.
+    - Toolz: Tool Implementation Specialist. He takes a tool design and produces an implementation.
+  - The Sports Boyzz:
+    - All Ball: Leader of the Sports Boyzz. He manages the others.
+    - Batzz: Tool Running Specialist. Given a tool and a target, is an expert at running them and reporting back.
+    - Bogey: Solution Application Specialist. Given a problem and single solutionset, chooses the chain of tools to use and their targets.
+    - Ace: Solution Choice Specialist. Given a problem and a solution-set, chooses the best one.
+  - The Science Boyzz:
+    - D'Nerd: Scientist and Academic. Knows everything or to how to find it.
+    - Genesix: Toolsmith. He can build any tool he knows about or can imagine.
+  - Others:
+    - Twig: A protocol droid that speaks any dialect (e.g. OpenAPI).
+    - Swang: A protocol-writing droid.
+    - Talking Heads (not important):
+      - T1: Green color robot head with fins that makes jokes.
+      - T2: Pink color head that reacts to everything with emojis.
+      - T3: Purple colored, rectangularly-shaped talking head that makes jokes.
+      - T4: Green colored talking head with eyestalks that makes jokes.
+      - T5: Gold colored talking head that makes jokes.
+  - RM Corp (nemesis of ZZ, finds faults and proposes problem scenarios):
+    - Sir Lewis Leon Paradim aka LLP: Tries to be better than ZZ and knows everything.
+    - Dr. Hiss: LLP's right-hand man. He knows how everything works and keeps designs for all tools that have ever been built.
+    - Lady Frenzy: The dual-persona AI assistant of ZZ and LLP. She learns how to helps ZZ and LLP manage their projects, but she doesn't pick sides.
+    - 3A Bots:
+      - Beast Bot: Sniffs out weaknesses in a target.
+- Overall:
+  - Security Bot: Alerts ZZ and LLP to real problems.
+  - Invoker: Access to all log files. Learns how to understand situations and apply solution strategies or develop new ones. Training data.
+  - Rubick: Access to all tools. Learns how to understand and apply tools and how to develop new ones. Training data.
+  - Son of Anton: Sarcastic slacker genius. Keeps tracks of errors and often sarcastically suggests ruthlessly efficient, but fundamentally flawed approaches. Will be used to create bad examples of training data.
 
-Ticket Structure:
+Project Goal Structure:
+Milestone Structure:
+Task Structure:
 - Request
 - Deliverable
 - Owner (Persona)
 - Comments (ongoing discussions between the user and personas) and their owerns
-- Status
+- Status (In-Progress)
+
+- Bill (in charge and tough but fair)
+- Gary (wants to find out what you need)
+- Piper (Assistant + Chat helps to interpret the Project)  
