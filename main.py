@@ -8,6 +8,7 @@ from config import API_HOST, API_PORT, RECONNECT_PROJECTS, RESUME_PROJECTS
 from services import docker_service
 # Import from the new state module
 from core.state_manager import active_projects_state, add_project_to_state, remove_project_from_state
+from routers.internal import storage_api, llm_api, pm_api, system_api
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -69,6 +70,10 @@ app = FastAPI(
 # Include the API routers
 app.include_router(ollama_router.router)
 app.include_router(projects_router.router)
+app.include_router(system_api.router, prefix="/internal/v1/compute", tags=["Internal - System"])
+app.include_router(storage_api.router, prefix="/internal/v1/storage", tags=["Internal - Storage"])
+app.include_router(pm_api.router, prefix="/internal/v1/pm", tags=["Internal - Project Management"])
+app.include_router(llm_api.router, prefix="/internal/v1/llm", tags=["Internal - LLM"])
 
 @app.get("/", tags=["Root"])
 async def root():

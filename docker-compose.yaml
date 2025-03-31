@@ -36,6 +36,7 @@ services:
       - REDISLITE_DB_FILE=/persistent_data/state/internal_state.rdb # Use path inside container
       # Add other necessary env vars
     restart: unless-stopped
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001", "--reload", "--reload-dir", "/app"]
     depends_on:
       - kanboard # Optional: wait for kanboard service to start (doesn't guarantee readiness)
 
