@@ -1,43 +1,28 @@
-# Use a specific LTS version for reproducibility
-FROM ubuntu:22.04
+# Dockerfile (for the MRM36 API Service)
 
-# Avoid interactive prompts during installation
-ENV DEBIAN_FRONTEND=noninteractive
+# Use a suitable Python base image
+FROM python:3.12-slim
 
-# Install common development tools
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    # Basics
-    git \
-    curl \
-    wget \
-    unzip \
-    jq \
-    ca-certificates \
-    # Text Editors
-    nano \
-    vim \
-    # Build Tools
-    build-essential \
-    cmake \
-    # Python
-    python3 \
-    python3-pip \
-    python3-venv \
-    # Node.js (Example - choose version as needed)
-    # nodejs \
-    # npm \
-    # Add other languages/tools as needed (e.g., Go, Rust, Java SDK)
-    # ... \
-    # Clean up apt cache
-    && rm -rf /var/lib/apt/lists/*
+# Set environment variables to prevent buffering issues with logs
+ENV PYTHONUNBUFFERED=1
 
-# Set a default working directory (optional)
-WORKDIR /workspace
+# Set the working directory inside the container
+WORKDIR /app
 
-# (Optional) Create a non-root user for added security
-# RUN useradd -ms /bin/bash agentuser
-# USER agentuser
+# Copy only the requirements file first to leverage Docker cache
+COPY requirements.txt .
 
-# Default command (will be overridden by 'sleep infinity' when run by service)
-CMD ["/bin/bash"]
+# Install dependencies
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Copy the rest of the application code into the container
+COPY . .
+
+# Expose the port the application runs on (matches Uvicorn command)
+EXPOSE 8001
+
+# Default command to run the application using Uvicorn
+# Use 0.0.0.0 to listen on all interfaces inside the container
+# Remove --reload for production, keep for development if desired
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]

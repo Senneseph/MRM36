@@ -7,10 +7,7 @@ OLLAMA_API_BASE_URL = os.getenv("OLLAMA_API_BASE_URL", "http://localhost:11434/a
 OLLAMA_TIMEOUT = 10.0
 
 # Docker connection
-DEFAULT_DOCKER_SOCKET_PATH = (
-    "npipe:////./pipe/docker_engine" if platform.system() == "Windows"
-    else "unix://var/run/docker.sock"
-)
+DEFAULT_DOCKER_SOCKET_PATH = "unix://var/run/docker.sock"
 DOCKER_SOCKET_PATH = os.getenv("DOCKER_SOCKET_PATH", DEFAULT_DOCKER_SOCKET_PATH)
 
 # API Server

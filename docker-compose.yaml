@@ -1,0 +1,61 @@
+# version: '3.8' # Specify docker-compose version OBSOLETE
+
+services:
+  # MRM36 API Service (Your Python App)
+  mrm36:
+    build: . # Build the image from the Dockerfile in the current directory
+    container_name: mrm36_core_service
+    ports:
+      - "8001:8001" # Map host port 8001 to container port 8001
+    volumes:
+      # Mount the Docker socket to allow this service to control Docker
+      # Use the appropriate path for your OS (Docker Desktop handles translation)
+      # For Linux/Mac/Windows+WSL2:
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Alternative for native Windows containers (less common with Docker Desktop):
+      # - "//./pipe/docker_engine://./pipe/docker_engine"
+
+      # Mount project code for development (optional, enables hot-reloading if uvicorn uses --reload)
+      # Comment out or remove for production deployments
+      - .:/app
+
+      # Mount the shared persistent data directory (for redislite db, project outputs etc.)
+      # Replace './persistent_data' with the absolute path you created in Step 1 if needed,
+      # but using a named volume defined below is generally better. Let's use a named volume.
+      - mrm36_shared_data:/persistent_data # Mount named volume to /persistent_data in container
+
+    environment:
+      # Pass configuration via environment variables (can also use .env file)
+      # Make sure these match or override settings in your config.py
+      - OLLAMA_API_BASE_URL=http://host.docker.internal:11434/api # Example: If Ollama runs on host
+      # DOCKER_SOCKET_PATH will likely be unix:///var/run/docker.sock inside the container if mounted
+      - KANBOARD_URL=http://kanboard:80/jsonrpc.php # Use service name 'kanboard'
+      - KANBOARD_API_TOKEN=${KANBOARD_API_TOKEN} # Read from .env file
+      - REDIS_URL=${REDIS_URL} # Read from .env file, leave empty for redislite
+      - PROJECTS_BASE_DIR=/persistent_data/projects # Use path inside container
+      - REDISLITE_DB_FILE=/persistent_data/state/internal_state.rdb # Use path inside container
+      # Add other necessary env vars
+    restart: unless-stopped
+    depends_on:
+      - kanboard # Optional: wait for kanboard service to start (doesn't guarantee readiness)
+
+  # Kanboard Service
+  kanboard:
+    image: kanboard/kanboard:latest
+    container_name: mrm36_kanboard
+    ports:
+      - "8090:80" # Map host port 8090 to container port 80 (avoid conflict with other web servers)
+    volumes:
+      - kanboard_data:/var/www/app/data # Persist Kanboard data using a named volume
+      - kanboard_plugins:/var/www/app/plugins # Persist Kanboard plugins
+    environment:
+      # Add any Kanboard specific env vars if needed (e.g., database settings if not using sqlite)
+      - TZ=America/New_York # Example: Set timezone (use your location)
+    restart: unless-stopped
+
+# Define named volumes for persistent data
+volumes:
+  kanboard_data:
+  kanboard_plugins:
+  mrm36_shared_data: # Volume for shared MRM36 data (redislite db, project outputs?)
+  

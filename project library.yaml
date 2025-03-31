@@ -56,11 +56,12 @@ Personas:
     - Bogey: Solution Application Specialist. Given a problem and single solutionset, chooses the chain of tools to use and their targets.
     - Ace: Solution Choice Specialist. Given a problem and a solution-set, chooses the best one.
   - The Science Boyzz:
-    - D'Nerd: Scientist and Academic. Knows everything or to how to find it.
+    - D'Nerd: Scientist and Academic. Knows everything or to how to find it. Good at problem solving.
     - Genesix: Toolsmith. He can build any tool he knows about or can imagine.
   - Others:
-    - Twig: A protocol droid that speaks any dialect (e.g. OpenAPI).
-    - Swang: A protocol-writing droid.
+    - Swang: A protocol droid that speaks any dialect (e.g. OpenAPI, SOAP, RPC).
+    - Freehand: A protocol-writing droid.
+    - Watson: Diagnoses problems and recommends remedies.
     - Talking Heads (not important):
       - T1: Green color robot head with fins that makes jokes.
       - T2: Pink color head that reacts to everything with emojis.
@@ -91,3 +92,5 @@ Task Structure:
 - Bill (in charge and tough but fair)
 - Gary (wants to find out what you need)
 - Piper (Assistant + Chat helps to interpret the Project)  
+
+- Need more ef
